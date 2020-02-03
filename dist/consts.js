@@ -3,6 +3,16 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const FcgiResponse_1 = require("./FcgiResponse");
 let coroutine = require("coroutine");
+var PADDING_BUFS = [
+    new Buffer(0),
+    new Buffer('\0'),
+    new Buffer('\0\0'),
+    new Buffer('\0\0\0'),
+    new Buffer('\0\0\0\0'),
+    new Buffer('\0\0\0\0\0'),
+    new Buffer('\0\0\0\0\0\0'),
+    new Buffer('\0\0\0\0\0\0\0'),
+];
 exports.EMPTY_BUF = new Buffer(0);
 exports.FLAG_PROPERTY_CLOSED = "$@closed";
 const FLAG_PROPERTY_LOCK = "$@locked";
@@ -103,6 +113,49 @@ function stringifyKv(kv) {
     }
     return Buffer.concat(bufs, bufsLen);
 }
+function parsePair(msgData, start) {
+    if (msgData.length - start < 1)
+        throw new Error('Unexpected server message: illegal key pair format.');
+    var keyLen = msgData.readUInt8(start, true);
+    if (keyLen > 127) {
+        if (msgData.length - start < 4)
+            throw new Error('Unexpected server message: illegal key pair format.');
+        keyLen = (msgData.readInt32BE(start, true) & 0x7fffffff);
+        start += 4;
+    }
+    else {
+        start++;
+    }
+    if (msgData.length - start < 1)
+        throw new Error('Unexpected server message: illegal key pair format.');
+    var valueLen = msgData.readUInt8(start, true);
+    if (valueLen > 127) {
+        if (msgData.length - start < 4)
+            throw new Error('Unexpected server message: illegal key pair format.');
+        valueLen = (msgData.readInt32BE(start, true) & 0x7fffffff);
+        start = start + 4;
+    }
+    else {
+        start++;
+    }
+    if (msgData.length - start < keyLen + valueLen)
+        throw new Error('Unexpected server message: illegal key pair format.');
+    return {
+        key: msgData.toString('utf8', start, start + keyLen),
+        value: msgData.toString('utf8', start + keyLen, start + keyLen + valueLen),
+        end: start + keyLen + valueLen
+    };
+}
+function parseCgiKv(msgData) {
+    var res = {};
+    for (var pos = 0; pos < msgData.length;) {
+        var pair = parsePair(msgData, pos);
+        res[pair.key] = pair.value;
+        pos = pair.end;
+    }
+    return res;
+}
+exports.parseCgiKv = parseCgiKv;
 function newRequestParams(opts, data) {
     let path = opts.path;
     let query = opts.query || "";
@@ -143,13 +196,50 @@ function packPart(msgType, requestId, data, version = 1) {
     buf.writeInt8(0, 7);
     return buf;
 }
-function sendRequest(socket, requestId, params, body, version = 1) {
+function before_send_request(socket, requestId) {
     if (!socket[FLAG_PROPERTY_LOCK]) {
         socket[FLAG_PROPERTY_LOCK] = new coroutine.Lock();
     }
     socket[FLAG_PROPERTY_LOCK].acquire(true); //写数据包时锁定一下
-    let wait = { evt: new coroutine.Event(), rsp: null };
-    socket["@" + requestId] = wait;
+    let wrap = { evt: new coroutine.Event(), rsp: null };
+    if (requestId == 0 && socket["@" + requestId] != null) {
+        return socket["@" + requestId];
+    }
+    socket["@" + requestId] = wrap;
+    return wrap;
+}
+function writeMsgPartSlice(socket, msgType, requestId, data, len, start, end, version) {
+    var contentLen = end - start;
+    var paddingLen = (8 - (contentLen % 8)) % 8;
+    if (start || end !== len)
+        data = data.slice(start, end);
+    var buf = new Buffer(8);
+    buf.writeUInt8(version, 0, true);
+    buf.writeUInt8(msgType, 1, true);
+    buf.writeUInt16BE(requestId, 2, true);
+    buf.writeUInt16BE(contentLen, 4, true);
+    buf.writeUInt8(0, 6, true);
+    buf.writeUInt8(0, 7, true);
+    socket.write(buf);
+    if (paddingLen) {
+        socket.write(data);
+        socket.write(PADDING_BUFS[paddingLen]);
+    }
+    else {
+        socket.write(data);
+    }
+}
+function writeMsgBySlice(socket, msgType, requestId, data, version) {
+    data = data ? data : exports.EMPTY_BUF;
+    var len = data.length;
+    for (var start = 0; start < len - 0xffff; start += 0xffff) {
+        console.log("--", start);
+        writeMsgPartSlice(socket, msgType, requestId, data, len, start, start + 0xffff, version);
+    }
+    writeMsgPartSlice(socket, msgType, requestId, data, len, start, len, version);
+}
+function sendRequest(socket, requestId, params, body, version = 1) {
+    let wrap = before_send_request(socket, requestId);
     try {
         //begin-request
         let cgi_role = 1; //1 2 3
@@ -159,13 +249,26 @@ function sendRequest(socket, requestId, params, body, version = 1) {
         socket.write(begin_body);
         //kv-request
         let kv_body = stringifyKv(params);
-        socket.write(packPart(MsgType.PARAMS, requestId, kv_body, version));
-        socket.write(kv_body);
+        if (kv_body.length > 0xffff) {
+            writeMsgBySlice(socket, MsgType.PARAMS, requestId, kv_body, version);
+        }
+        else {
+            socket.write(packPart(MsgType.PARAMS, requestId, kv_body, version));
+            socket.write(kv_body);
+        }
         socket.write(packPart(MsgType.PARAMS, requestId, null, version));
         //body-request
-        socket.write(packPart(MsgType.STDIN, requestId, body, version));
         if (body) {
-            socket.write(body);
+            if (body.length > 0xffff) {
+                writeMsgBySlice(socket, MsgType.STDIN, requestId, body, version);
+            }
+            else {
+                socket.write(packPart(MsgType.STDIN, requestId, body, version));
+                socket.write(body);
+            }
+        }
+        else {
+            socket.write(packPart(MsgType.STDIN, requestId, null, version));
         }
     }
     catch (e) {
@@ -174,9 +277,9 @@ function sendRequest(socket, requestId, params, body, version = 1) {
     }
     finally {
         socket[FLAG_PROPERTY_LOCK].release(); //写数据包时锁定一下
+        wrap.evt.wait();
     }
-    wait.evt.wait();
-    return wait.rsp;
+    return wrap.rsp;
 }
 exports.sendRequest = sendRequest;
 function sendRequestByHttp(socket, requestId, req, cgiRoot) {
@@ -234,6 +337,25 @@ function sendRequestByHttp(socket, requestId, req, cgiRoot) {
     return 0;
 }
 exports.sendRequestByHttp = sendRequestByHttp;
+function sendGetCgiVal(socket, params, version = 1) {
+    let requestId = 0;
+    let wrap = before_send_request(socket, requestId);
+    try {
+        let kv_body = stringifyKv(params);
+        socket.write(packPart(MsgType.GET_VALUES, requestId, kv_body, version));
+        socket.write(kv_body);
+    }
+    catch (e) {
+        try_sock_close(socket);
+        throw e;
+    }
+    finally {
+        socket[FLAG_PROPERTY_LOCK].release(); //写数据包时锁定一下
+        wrap.evt.wait();
+    }
+    return wrap.rsp;
+}
+exports.sendGetCgiVal = sendGetCgiVal;
 function check_sock_recv(socket, readData) {
     if (readData == null) {
         try_sock_close(socket);
@@ -288,6 +410,7 @@ function recvMsgByBlock(sock) {
         while (!sock[exports.FLAG_PROPERTY_CLOSED]) {
             var part = recvMsgPart(sock);
             let wait = sock["@" + part.id];
+            // console.log("while",wait,part,part.body.toString())
             if (wait.rsp == null) {
                 wait.rsp = new FcgiResponse_1.FcgiResponse(part);
             }
@@ -317,7 +440,7 @@ if (!global.hasOwnProperty("fibfcgi_request_id")) {
 function nextRequestId() {
     var r = global["fibfcgi_request_id"] + 1;
     if (r >= 0xFFFF) {
-        r = 0;
+        r = 1;
     }
     global["fibfcgi_request_id"] = r;
     return r;

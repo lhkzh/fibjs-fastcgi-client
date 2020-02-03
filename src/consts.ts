@@ -3,7 +3,16 @@
 import {FcgiResponse} from "./FcgiResponse";
 import {FcgiRequestOpts} from "../@types";
 let coroutine=require("coroutine");
-
+var PADDING_BUFS = [
+    new Buffer(0),
+    new Buffer('\0'),
+    new Buffer('\0\0'),
+    new Buffer('\0\0\0'),
+    new Buffer('\0\0\0\0'),
+    new Buffer('\0\0\0\0\0'),
+    new Buffer('\0\0\0\0\0\0'),
+    new Buffer('\0\0\0\0\0\0\0'),
+];
 export const EMPTY_BUF = new Buffer(0);
 export const FLAG_PROPERTY_CLOSED = "$@closed";
 const FLAG_PROPERTY_LOCK = "$@locked";
@@ -99,6 +108,41 @@ function stringifyKv(kv) {
     }
     return Buffer.concat(bufs, bufsLen);
 }
+function parsePair(msgData, start){
+    if(msgData.length - start < 1) throw new Error('Unexpected server message: illegal key pair format.');
+    var keyLen = msgData.readUInt8(start, true);
+    if(keyLen > 127) {
+        if(msgData.length - start < 4) throw new Error('Unexpected server message: illegal key pair format.');
+        keyLen = (msgData.readInt32BE(start, true) & 0x7fffffff);
+        start += 4;
+    } else {
+        start++;
+    }
+    if(msgData.length - start < 1) throw new Error('Unexpected server message: illegal key pair format.');
+    var valueLen = msgData.readUInt8(start, true);
+    if(valueLen > 127) {
+        if(msgData.length - start < 4) throw new Error('Unexpected server message: illegal key pair format.');
+        valueLen = (msgData.readInt32BE(start, true) & 0x7fffffff);
+        start = start + 4;
+    } else {
+        start++;
+    }
+    if(msgData.length - start < keyLen + valueLen) throw new Error('Unexpected server message: illegal key pair format.');
+    return {
+        key: msgData.toString('utf8', start, start + keyLen),
+        value: msgData.toString('utf8', start + keyLen, start + keyLen + valueLen),
+        end: start + keyLen + valueLen
+    };
+}
+export function parseCgiKv(msgData:Class_Buffer){
+    var res = {};
+    for(var pos = 0; pos < msgData.length;) {
+        var pair = parsePair(msgData, pos);
+        res[pair.key] = pair.value;
+        pos = pair.end;
+    }
+    return res;
+}
 
 export function newRequestParams(opts:FcgiRequestOpts, data?:Class_Buffer){
     let path = opts.path;
@@ -139,13 +183,48 @@ function packPart(msgType:number, requestId:number, data:Class_Buffer,version:nu
     buf.writeInt8(0,7);
     return buf;
 }
-export function sendRequest(socket:Class_Socket,requestId:number, params:{[index:string]:string|number}, body:Class_Buffer, version:number=1):FcgiResponse {
+function before_send_request(socket:Class_Socket,requestId:number) {
     if(!socket[FLAG_PROPERTY_LOCK]){
         socket[FLAG_PROPERTY_LOCK]=new coroutine.Lock();
     }
     (<Class_Lock>socket[FLAG_PROPERTY_LOCK]).acquire(true);//写数据包时锁定一下
-    let wait = {evt:new coroutine.Event(),rsp:null};
-    socket["@"+requestId]=wait;
+    let wrap = {evt:new coroutine.Event(),rsp:null};
+    if(requestId==0 && socket["@"+requestId]!=null){
+        return socket["@"+requestId];
+    }
+    socket["@"+requestId]=wrap;
+    return wrap;
+}
+function writeMsgPartSlice(socket:Class_Socket, msgType:number, requestId:number, data:Class_Buffer, len:number, start:number, end:number, version:number) {
+    var contentLen = end - start;
+    var paddingLen = (8 - (contentLen % 8)) % 8;
+    if(start || end !== len) data = data.slice(start, end);
+    var buf = new Buffer(8);
+    buf.writeUInt8(version, 0, true);
+    buf.writeUInt8(msgType, 1, true);
+    buf.writeUInt16BE(requestId, 2, true);
+    buf.writeUInt16BE(contentLen, 4, true);
+    buf.writeUInt8(0, 6, true);
+    buf.writeUInt8(0, 7, true);
+    socket.write(buf);
+    if(paddingLen) {
+        socket.write(data);
+        socket.write(PADDING_BUFS[paddingLen]);
+    } else {
+        socket.write(data);
+    }
+}
+function writeMsgBySlice(socket:Class_Socket, msgType:number, requestId:number, data:Class_Buffer,version:number) {
+    data=data?data:EMPTY_BUF;
+    var len = data.length;
+    for(var start=0; start < len - 0xffff; start += 0xffff) {
+        console.log("--",start)
+        writeMsgPartSlice(socket,msgType,requestId,data,len, start, start + 0xffff,version);
+    }
+    writeMsgPartSlice(socket,msgType,requestId,data,len, start, len,version);
+}
+export function sendRequest(socket:Class_Socket,requestId:number, params:{[index:string]:string|number}, body:Class_Buffer, version:number=1):FcgiResponse {
+    let wrap = before_send_request(socket,requestId);
     try{
         //begin-request
         let cgi_role=1;//1 2 3
@@ -155,22 +234,32 @@ export function sendRequest(socket:Class_Socket,requestId:number, params:{[index
         socket.write(begin_body);
         //kv-request
         let kv_body = stringifyKv(params);
-        socket.write(packPart(MsgType.PARAMS, requestId, kv_body, version));
-        socket.write(kv_body);
+        if(kv_body.length>0xffff){
+            writeMsgBySlice(socket, MsgType.PARAMS, requestId, kv_body, version);
+        }else{
+            socket.write(packPart(MsgType.PARAMS, requestId, kv_body, version));
+            socket.write(kv_body);
+        }
         socket.write(packPart(MsgType.PARAMS, requestId, null, version));
         //body-request
-        socket.write(packPart(MsgType.STDIN, requestId, body, version));
         if(body){
-            socket.write(body);
+            if(body.length>0xffff){
+                writeMsgBySlice(socket,MsgType.STDIN, requestId,body,version);
+            }else{
+                socket.write(packPart(MsgType.STDIN, requestId,body,version));
+                socket.write(body);
+            }
+        }else{
+            socket.write(packPart(MsgType.STDIN, requestId, null, version));
         }
     }catch (e) {
         try_sock_close(socket);
         throw e;
     }finally {
         (<Class_Lock>socket[FLAG_PROPERTY_LOCK]).release();//写数据包时锁定一下
+        wrap.evt.wait();
     }
-    wait.evt.wait();
-    return wait.rsp;
+    return wrap.rsp;
 }
 export function sendRequestByHttp(socket:Class_Socket,requestId:number, req:Class_HttpRequest, cgiRoot?:string) {
     let path = req.address;
@@ -224,6 +313,22 @@ export function sendRequestByHttp(socket:Class_Socket,requestId:number, req:Clas
     req.end();
     return 0;
 }
+export function sendGetCgiVal(socket:Class_Socket, params:{[index:string]:any}, version:number=1) {
+    let requestId=0;
+    let wrap = before_send_request(socket,requestId);
+    try{
+        let kv_body = stringifyKv(params);
+        socket.write(packPart(MsgType.GET_VALUES, requestId, kv_body, version));
+        socket.write(kv_body);
+    }catch (e) {
+        try_sock_close(socket);
+        throw e;
+    }finally {
+        (<Class_Lock>socket[FLAG_PROPERTY_LOCK]).release();//写数据包时锁定一下
+        wrap.evt.wait();
+    }
+    return wrap.rsp;
+}
 function check_sock_recv(socket:Class_Socket, readData){
     if(readData==null){
         try_sock_close(socket);
@@ -258,11 +363,6 @@ export function recvMsgPart(socket:Class_Socket) {
     let restBodyLen = headData.readUInt16BE(4, true);
     let restPaddingLen = headData.readUInt8(6, true);
     let reserved = headData.readUInt8(7, true)!=0;
-    // if(msgType === MsgType.GET_VALUES_RESULT || msgType === MsgType.END_REQUEST) {
-    //     expectLen = restBodyLen + restPaddingLen;
-    // } else {
-    //     expectLen = 0;
-    // }
     let content = restBodyLen>0?socket.read(restBodyLen):EMPTY_BUF;
     check_sock_recv(socket,content);
     if(restPaddingLen>0){
@@ -275,6 +375,7 @@ function recvMsgByBlock(sock:Class_Socket) {
         while(!sock[FLAG_PROPERTY_CLOSED]){
             var part = recvMsgPart(sock);
             let wait:{evt:Class_Event,rsp:FcgiResponse}=sock["@"+part.id];
+            // console.log("while",wait,part,part.body.toString())
             if(wait.rsp==null){
                 wait.rsp=new FcgiResponse(part);
             }
@@ -303,7 +404,7 @@ if(!global.hasOwnProperty("fibfcgi_request_id")){
 export function nextRequestId():number {
     var r = global["fibfcgi_request_id"]+1;
     if(r>=0xFFFF){
-        r=0;
+        r=1;
     }
     global["fibfcgi_request_id"]=r;
     return r;

@@ -1,8 +1,8 @@
 import {
     FLAG_PROPERTY_CLOSED,
     newRequestParams,
-    nextRequestId,
-    recvMsgByFiber,
+    nextRequestId, parseCgiKv,
+    recvMsgByFiber, sendGetCgiVal,
     sendRequest,
     sendRequestByHttp,
     toQueryString, try_sock_close
@@ -117,5 +117,22 @@ export class FcgiClient implements FcgiClientApi{
         this.tryAutoConnect();
         cgiParams["DOCUMENT_ROOT"]=this.root;
         return sendRequest(this.sock, nextRequestId(), cgiParams, body);
+    }
+
+    /**
+     * 获取cgi运行参数
+     */
+    public requestCgiVars(){
+        this.tryAutoConnect();
+        let params = {FCGI_MAX_CONNS: '',FCGI_MAX_REQS: '',FCGI_MPXS_CONNS: '',};
+        let rsp = sendGetCgiVal(this.sock, params);
+        let kv = parseCgiKv(rsp.content);
+        let ret:{[index:string]:number}={};
+        for(var k in kv){
+            if(!isNaN(parseInt(kv[k]))){
+                ret[k.replace("FCGI_","")]=parseInt(kv[k]);
+            }
+        }
+        return ret;
     }
 }

@@ -21,6 +21,11 @@ var fcgi=require("./dist/index");
 var coroutine=require("coroutine");
 // var client = new fcgi.FcgiClient({host:"127.0.0.1",port:9123});
 // var client = new fcgi.FcgiClient({host:"127.0.0.1",port:9000,root:"/mnt/e/workplace/fib_fcgi/php"});
+// var pst=[];for(var i=0;i<25535;i++){pst.push(i+"=1")};pst=Buffer.from(pst.join("&"))
+// var rsp=client.requestByParams("/hi.php","a=abc&i="+(idx++),pst);
+// console.log(rsp.requestId,rsp.protocolStatus,rsp.appStatus,rsp.content.length,/*rsp.content.toString()*/);
+// console.log(client.requestCgiVars());
+
 // var client = new fcgi.FcgiClientPool({host:"127.0.0.1",port:9000,root:"/mnt/e/workplace/fib_fcgi/php"});
 var client = new fcgi.FcgiClientPool({host:"127.0.0.1",port:9123,root:"E:/workplace/fib_fcgi/php"});
 
@@ -28,7 +33,7 @@ for(var i=0;i<100;i++){
     coroutine.start(function () {
         // root:"/mnt/e/workplace/fib_fcgi/php"
 
-
+        var t=i;
         var rsp=client.requestByParams("/hi.php","a=abc&i="+(idx++));
         console.log(rsp.requestId,rsp.protocolStatus,rsp.appStatus,rsp.content.toString());
         // console.log(client.requestByParams("/hi.php","a=abc&i="+(idx++)).requestId);

@@ -38,6 +38,10 @@ export class FcgiResponse {
             }else{
                 this.err=Buffer.concat([this.err,data.body]);
             }
+        }else if(data.type==MsgType.GET_VALUES_RESULT){
+            // console.log("---?",data)
+            this.content=data.body;
+            return true;
         }
         return false;
     }

@@ -33,6 +33,11 @@ class FcgiResponse {
                 this.err = Buffer.concat([this.err, data.body]);
             }
         }
+        else if (data.type == consts_1.MsgType.GET_VALUES_RESULT) {
+            // console.log("---?",data)
+            this.content = data.body;
+            return true;
+        }
         return false;
     }
     parse() {
