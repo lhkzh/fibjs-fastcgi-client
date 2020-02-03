@@ -392,11 +392,6 @@ function recvMsgPart(socket) {
     let restBodyLen = headData.readUInt16BE(4, true);
     let restPaddingLen = headData.readUInt8(6, true);
     let reserved = headData.readUInt8(7, true) != 0;
-    // if(msgType === MsgType.GET_VALUES_RESULT || msgType === MsgType.END_REQUEST) {
-    //     expectLen = restBodyLen + restPaddingLen;
-    // } else {
-    //     expectLen = 0;
-    // }
     let content = restBodyLen > 0 ? socket.read(restBodyLen) : exports.EMPTY_BUF;
     check_sock_recv(socket, content);
     if (restPaddingLen > 0) {

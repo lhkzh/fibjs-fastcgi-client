@@ -103,4 +103,15 @@ export class FcgiClientPool implements FcgiClientApi{
             this.returnClient(c);
         }
     }
+    /**
+     * 获取cgi运行参数
+     */
+    public requestCgiVars(params:{[index:string]:string}){
+        var c=this.borrowClient();
+        try{
+            return c.requestCgiVars(params);
+        }finally {
+            this.returnClient(c);
+        }
+    }
 }

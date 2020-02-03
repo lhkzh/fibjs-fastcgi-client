@@ -105,9 +105,9 @@ class FcgiClient {
     /**
      * 获取cgi运行参数
      */
-    requestCgiVars() {
+    requestCgiVars(params) {
         this.tryAutoConnect();
-        let params = { FCGI_MAX_CONNS: '', FCGI_MAX_REQS: '', FCGI_MPXS_CONNS: '', };
+        params = params ? params : { FCGI_MAX_CONNS: '', FCGI_MAX_REQS: '', FCGI_MPXS_CONNS: '', };
         let rsp = consts_1.sendGetCgiVal(this.sock, params);
         let kv = consts_1.parseCgiKv(rsp.content);
         let ret = {};

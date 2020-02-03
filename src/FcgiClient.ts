@@ -122,9 +122,9 @@ export class FcgiClient implements FcgiClientApi{
     /**
      * 获取cgi运行参数
      */
-    public requestCgiVars(){
+    public requestCgiVars(params:{[index:string]:string}){
         this.tryAutoConnect();
-        let params = {FCGI_MAX_CONNS: '',FCGI_MAX_REQS: '',FCGI_MPXS_CONNS: '',};
+        params = params?params:{FCGI_MAX_CONNS: '',FCGI_MAX_REQS: '',FCGI_MPXS_CONNS: '',};
         let rsp = sendGetCgiVal(this.sock, params);
         let kv = parseCgiKv(rsp.content);
         let ret:{[index:string]:number}={};
