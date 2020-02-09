@@ -29,14 +29,12 @@ var coroutine=require("coroutine");
 // var client = new fcgi.FcgiClientPool({host:"127.0.0.1",port:9000,root:"/mnt/e/workplace/fib_fcgi/php"});
 var client = new fcgi.FcgiClientPool({host:"127.0.0.1",port:9123,root:"E:/workplace/fib_fcgi/php"});
 
-for(var i=0;i<100;i++){
-    coroutine.start(function () {
-        // root:"/mnt/e/workplace/fib_fcgi/php"
-
-        var t=i;
-        var rsp=client.requestByParams("/hi.php","a=abc&i="+(idx++));
-        console.log(rsp.requestId,rsp.protocolStatus,rsp.appStatus,rsp.content.toString());
-        // console.log(client.requestByParams("/hi.php","a=abc&i="+(idx++)).requestId);
-    })
-}
-
+// for(var i=0;i<100;i++){
+//     coroutine.start(function () {
+//         // root:"/mnt/e/workplace/fib_fcgi/php"
+//         var t=i;
+//         var rsp=client.requestByParams("/hi.php","a=abc&i="+(idx++));
+//         console.log(rsp.requestId,rsp.protocolStatus,rsp.appStatus,rsp.content.toString());
+//         // console.log(client.requestByParams("/hi.php","a=abc&i="+(idx++)).requestId);
+//     })
+// }

@@ -1,12 +1,12 @@
 {
   "name": "fibjs-fastcgi-client",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "",
   "main": "./dist/index.js",
   "types": "./@types/index.d.ts",
   "private": false,
   "author": "",
-  "homepage": "https://u14.com",
+  "homepage": "https://github.com/lhkzh/fibjs-fastcgi-client",
   "license": "ISC",
   "dependencies": {
   },

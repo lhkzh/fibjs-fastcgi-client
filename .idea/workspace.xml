@@ -11,8 +11,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="JavaScript File" />
         <option value="TypeScript File" />
+        <option value="JavaScript File" />
       </list>
     </option>
   </component>
@@ -20,9 +20,15 @@
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="E:/gitwork/jiayoumengchong/jiayoumengchong_server" />
     <property name="nodejs_package_manager_path" value="npm" />
     <property name="ts.external.directory.path" value="E:\Program\WebStorm20192\plugins\JavaScriptLanguage\jsLanguageServicesImpl\external" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="E:\workplace\fib_fcgi" />
+      <recent name="E:\workplace\fib_fcgi\ftp" />
+    </key>
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -48,7 +54,10 @@
       <updated>1580296055808</updated>
       <workItem from="1580296057007" duration="24962000" />
       <workItem from="1580440100302" duration="18826000" />
-      <workItem from="1580532512878" duration="8345000" />
+      <workItem from="1580532512878" duration="9219000" />
+      <workItem from="1580895210360" duration="10334000" />
+      <workItem from="1581127204439" duration="6200000" />
+      <workItem from="1581248358486" duration="107000" />
     </task>
     <servers />
   </component>
