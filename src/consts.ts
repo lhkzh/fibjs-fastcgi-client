@@ -3,6 +3,7 @@
 import {FcgiResponse} from "./FcgiResponse";
 import {FcgiRequestOpts} from "../@types";
 let coroutine=require("coroutine");
+let util=require("util");
 var PADDING_BUFS = [
     new Buffer(0),
     new Buffer('\0'),
@@ -168,7 +169,7 @@ export function newRequestParams(opts:FcgiRequestOpts, data?:Class_Buffer){
         CONTENT_LENGTH:(data?data.length:0)+""
     };
     for(var k in opts.headers){
-        params[k.replace(/-/g,'_').toUpperCase()]=opts.headers[k]+"";
+        if(!util.isFunction(opts.headers[k]))params[k.replace(/-/g,'_').toUpperCase()]=String(opts.headers[k]);
     }
     return params;
 }
