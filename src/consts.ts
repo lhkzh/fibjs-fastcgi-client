@@ -144,13 +144,22 @@ export function parseCgiKv(msgData:Class_Buffer){
     }
     return res;
 }
-
-export function newRequestParams(opts:FcgiRequestOpts, data?:Class_Buffer){
+export function newRequestParams(opts:FcgiRequestOpts, data?:Class_Buffer, serverParamss:any={}){
     let path = opts.path;
     let query = opts.query||"";
     let root = opts.root||process.cwd()+'/php';
     let cgi_file = root+path;
-    let params:{[index:string]:string} = {
+    let params:{[index:string]:string} = {};
+    for(var k in opts.headers){
+        if(!util.isFunction(opts.headers[k])){
+            params['HTTP_'+k.replace(/-/g,'_').toUpperCase()]=String(opts.headers[k]);
+        }
+    }
+    serverParamss.SERVER_NAME=serverParamss.SERVER_NAME||"localhost";
+    serverParamss.SERVER_SOFTWARE=serverParamss.SERVER_SOFTWARE||"fibjs";
+    params = {
+        ...params,
+        ...serverParamss,
         GATEWAY_INTERFACE:"FastCGI/1.0",
         REQUEST_METHOD:opts.method||(data&&data.length>0?"POST":"GET"),
         DOCUMENT_ROOT:root,
@@ -162,14 +171,9 @@ export function newRequestParams(opts:FcgiRequestOpts, data?:Class_Buffer){
         REMOTE_PORT:(opts.remotePort||90999)+"",
         SERVER_ADDR:opts.localAddress||"127.0.0.1",
         SERVER_PORT:(opts.localPort||80)+"",
-        SERVER_NAME:"localhost",
         SERVER_PROTOCOL:"HTTP/1.1",
-        SERVER_SOFTWARE:"fibjs",
         CONTENT_TYPE:opts.headers&&opts.headers["Content-Type"]?opts.headers["Content-Type"]:"",
         CONTENT_LENGTH:(data?data.length:0)+""
-    };
-    for(var k in opts.headers){
-        if(!util.isFunction(opts.headers[k]))params[k.replace(/-/g,'_').toUpperCase()]=String(opts.headers[k]);
     }
     return params;
 }
@@ -262,12 +266,20 @@ export function sendRequest(socket:Class_Socket,requestId:number, params:{[index
     }
     return wrap.rsp;
 }
-export function sendRequestByHttp(socket:Class_Socket,requestId:number, req:Class_HttpRequest, cgiRoot?:string) {
+export function sendRequestByHttp(socket:Class_Socket,requestId:number, req:Class_HttpRequest, cgiRoot?:string, serverParamss:any={}) {
     let path = req.address;
     let query = req.queryString;
     let root = cgiRoot?cgiRoot:process.cwd()+'/php';
     let cgi_file = root+path;
-    let params:{[index:string]:string|number} = {
+    let params:{[index:string]:string|number} = {};
+    for(var k in req.headers){
+        if(!util.isFunction(req.headers[k]))params['HTTP_'+k.replace(/-/g,'_').toUpperCase()]=String(req.headers[k]);
+    }
+    serverParamss.SERVER_NAME=serverParamss.SERVER_NAME||"localhost";
+    serverParamss.SERVER_SOFTWARE=serverParamss.SERVER_SOFTWARE||"fibjs";
+    params = {
+        ...params,
+        ...serverParamss,
         GATEWAY_INTERFACE:"FastCGI/1.0",
         REQUEST_METHOD:req.method,
         DOCUMENT_ROOT:root,
@@ -279,14 +291,9 @@ export function sendRequestByHttp(socket:Class_Socket,requestId:number, req:Clas
         REMOTE_PORT:req.socket["remotePort"],
         SERVER_ADDR:req.socket["localAddress"],
         SERVER_PORT:req.socket["localPort"],
-        SERVER_NAME:"localhost",
         SERVER_PROTOCOL:req.protocol,
-        SERVER_SOFTWARE:"fibjs",
         CONTENT_TYPE:req.hasHeader("Content-Type")?req.firstHeader("Content-Type"):"",
         CONTENT_LENGTH:(req.data?req.data.length:0)
-    };
-    for(var k in req.headers){
-        params[k.replace(/-/g,'_').toUpperCase()]=req.headers[k]+"";
     }
     let rsp = sendRequest(socket, requestId, params, req.data);
     if(!rsp){

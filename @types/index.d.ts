@@ -1,6 +1,6 @@
 /// <reference types="@fibjs/types" />
 
-import {FcgiClient, FcgiResponse} from "../src";
+import {FcgiClientPool, FcgiClient, FcgiResponse} from "../src";
 
 export interface FcgiRequestOpts{
     path:string,query?:string,
@@ -37,5 +37,6 @@ export interface FcgiClientApi {
 
 export{
     FcgiResponse,
-    FcgiClient
+    FcgiClient,
+    FcgiClientPool
 }

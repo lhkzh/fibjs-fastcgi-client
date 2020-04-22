@@ -6,11 +6,11 @@ const default_opts = {min:1,max:4,autoReconnect:true,host:"127.0.0.1",port:9000}
 
 export class FcgiClientPool implements FcgiClientApi{
     private clients:FcgiClient[];
-    private cfg:{host?:string,port?:number,root?:string,autoReconnect?:boolean,min?:number,max?:number};
+    private cfg:{host?:string,port?:number,root?:string,autoReconnect?:boolean,min?:number,max?:number, serverParams?:any};
     private num:number;
     private notify:Class_Event;
     private _closed:boolean;
-    constructor(opts?:{host?:string,port?:number,root?:string,autoReconnect?:boolean,min?:number,max?:number}){
+    constructor(opts?:{host?:string,port?:number,root?:string,autoReconnect?:boolean,min?:number,max?:number, serverParams?:any}){
         if(!opts){
             opts=default_opts;
         }else{

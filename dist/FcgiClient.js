@@ -10,7 +10,7 @@ let coroutine = require("coroutine");
  */
 class FcgiClient {
     constructor(opts = {}) {
-        this.opts = { host: opts.host || "127.0.0.1", port: opts.port || 9000, autoReconnect: opts.autoReconnect };
+        this.opts = { host: opts.host || "127.0.0.1", port: opts.port || 9000, autoReconnect: opts.autoReconnect, serverParams: opts.serverParams || {} };
         this.root = opts.root || path.fullpath(process.cwd() + '/php');
         this.wait_connect = new coroutine.Event(false);
         this.recv = consts_1.recvMsgByFiber(this.connect());
@@ -70,7 +70,7 @@ class FcgiClient {
      */
     requestByHttp(req) {
         this.tryAutoConnect();
-        return consts_1.sendRequestByHttp(this.sock, consts_1.nextRequestId(), req, this.root);
+        return consts_1.sendRequestByHttp(this.sock, consts_1.nextRequestId(), req, this.root, this.opts.serverParams);
     }
     /**
      * 模拟参数请求
@@ -89,7 +89,7 @@ class FcgiClient {
                 opts[k] = addressInfo[k];
             }
         }
-        var cgiParams = consts_1.newRequestParams(opts, post);
+        var cgiParams = consts_1.newRequestParams(opts, post, this.opts.serverParams);
         return consts_1.sendRequest(this.sock, consts_1.nextRequestId(), cgiParams, post);
     }
     /**

@@ -21,11 +21,11 @@ export class FcgiClient implements FcgiClientApi{
     private sock:Class_Socket;
     private root:string;
     private recv:Class_Fiber;
-    private opts:{host:string,port:number,autoReconnect:boolean};
+    private opts:{host:string,port:number,autoReconnect:boolean, serverParams?:any};
     private wait_connect:Class_Event;
     private is_reConnectIng:boolean;
-    constructor(opts:{host?:string,port?:number,root?:string,autoReconnect?:boolean}={}){
-        this.opts={host:opts.host||"127.0.0.1",port:opts.port||9000,autoReconnect:opts.autoReconnect};
+    constructor(opts:{host?:string,port?:number,root?:string,autoReconnect?:boolean, serverParams?:any}={}){
+        this.opts={host:opts.host||"127.0.0.1",port:opts.port||9000,autoReconnect:opts.autoReconnect,serverParams:opts.serverParams||{}};
         this.root=opts.root||path.fullpath(process.cwd()+'/php');
         this.wait_connect = new coroutine.Event(false);
         this.recv=recvMsgByFiber(this.connect());
@@ -84,7 +84,7 @@ export class FcgiClient implements FcgiClientApi{
      */
     public requestByHttp(req:Class_HttpRequest):number{
         this.tryAutoConnect();
-        return sendRequestByHttp(this.sock, nextRequestId(), req, this.root);
+        return sendRequestByHttp(this.sock, nextRequestId(), req, this.root, this.opts.serverParams);
     }
 
     /**
@@ -104,7 +104,7 @@ export class FcgiClient implements FcgiClientApi{
                 opts[k]=addressInfo[k];
             }
         }
-        var cgiParams = newRequestParams(opts, post);
+        var cgiParams = newRequestParams(opts, post, this.opts.serverParams);
         return sendRequest(this.sock, nextRequestId(), cgiParams, post);
     }
 
