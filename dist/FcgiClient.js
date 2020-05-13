@@ -13,11 +13,15 @@ class FcgiClient {
         this.opts = { host: opts.host || "127.0.0.1", port: opts.port || 9000, autoReconnect: opts.autoReconnect, serverParams: opts.serverParams || {} };
         this.root = opts.root || path.fullpath(process.cwd() + '/php');
         this.wait_connect = new coroutine.Event(false);
-        this.recv = consts_1.recvMsgByFiber(this.connect());
+        this.autoConnect();
     }
     connect() {
         let sock = new net.Socket();
         sock.connect(this.opts.host, this.opts.port);
+        if (this.sock) {
+            consts_1.try_sock_close(this.sock);
+        }
+        this.recv = consts_1.recvMsgByFiber(sock);
         this.sock = sock;
         this.wait_connect.set();
         return sock;
@@ -55,7 +59,17 @@ class FcgiClient {
      */
     close() {
         this.opts.autoReconnect = false;
-        consts_1.try_sock_close(this.sock);
+        try {
+            if (this.is_reConnectIng) {
+                this.wait_connect.wait(); //等待重连
+            }
+        }
+        catch (e) {
+        }
+        if (this.sock) {
+            consts_1.try_sock_close(this.sock);
+        }
+        this.sock = null;
     }
     /**
      * 是否断开
