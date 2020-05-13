@@ -40,6 +40,7 @@ class FcgiClient {
             i--;
             try {
                 this.connect();
+                this.is_reConnectIng = false;
                 return true;
             }
             catch (e) {
@@ -47,6 +48,7 @@ class FcgiClient {
             }
         }
         this.wait_connect.set();
+        this.is_reConnectIng = false;
         throw new Error("io_error:connect fcgi fail");
     }
     tryAutoConnect() {

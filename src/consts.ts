@@ -266,7 +266,7 @@ export function sendRequest(socket:Class_Socket,requestId:number, params:{[index
     }
     return wrap.rsp;
 }
-export function sendRequestByHttp(socket:Class_Socket,requestId:number, req:Class_HttpRequest, cgiRoot?:string, serverParamss:any={}) {
+export function sendRequestByHttp(socket:Class_Socket,requestId:number, req:Class_HttpRequest, cgiRoot?:string, serverParamss:any={}, version:number=1) {
     let path = req.address;
     let query = req.queryString;
     let root = cgiRoot?cgiRoot:process.cwd()+'/php';
@@ -295,7 +295,7 @@ export function sendRequestByHttp(socket:Class_Socket,requestId:number, req:Clas
         CONTENT_TYPE:req.hasHeader("Content-Type")?req.firstHeader("Content-Type"):"",
         CONTENT_LENGTH:(req.data?req.data.length:0)
     }
-    let rsp = sendRequest(socket, requestId, params, req.data);
+    let rsp = sendRequest(socket, requestId, params, req.data, version);
     if(!rsp){
         req.response.writeHead(500,"io_error");
         req.end();

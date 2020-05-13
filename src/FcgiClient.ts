@@ -55,12 +55,14 @@ export class FcgiClient implements FcgiClientApi{
             i--;
             try{
                 this.connect();
+                this.is_reConnectIng=false;
                 return true;
             }catch (e) {
                 coroutine.sleep(Math.ceil(Math.random()*100));
             }
         }
         this.wait_connect.set();
+        this.is_reConnectIng=false;
         throw new Error("io_error:connect fcgi fail");
     }
     private tryAutoConnect(){

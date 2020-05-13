@@ -271,7 +271,7 @@ function sendRequest(socket, requestId, params, body, version = 1) {
     return wrap.rsp;
 }
 exports.sendRequest = sendRequest;
-function sendRequestByHttp(socket, requestId, req, cgiRoot, serverParamss = {}) {
+function sendRequestByHttp(socket, requestId, req, cgiRoot, serverParamss = {}, version = 1) {
     let path = req.address;
     let query = req.queryString;
     let root = cgiRoot ? cgiRoot : process.cwd() + '/php';
@@ -284,7 +284,7 @@ function sendRequestByHttp(socket, requestId, req, cgiRoot, serverParamss = {}) 
     serverParamss.SERVER_NAME = serverParamss.SERVER_NAME || "localhost";
     serverParamss.SERVER_SOFTWARE = serverParamss.SERVER_SOFTWARE || "fibjs";
     params = Object.assign(Object.assign(Object.assign({}, params), serverParamss), { GATEWAY_INTERFACE: "FastCGI/1.0", REQUEST_METHOD: req.method, DOCUMENT_ROOT: root, SCRIPT_FILENAME: cgi_file, SCRIPT_NAME: path, REQUEST_URI: path + query, QUERY_STRING: query, REMOTE_ADDR: req.socket["remoteAddress"], REMOTE_PORT: req.socket["remotePort"], SERVER_ADDR: req.socket["localAddress"], SERVER_PORT: req.socket["localPort"], SERVER_PROTOCOL: req.protocol, CONTENT_TYPE: req.hasHeader("Content-Type") ? req.firstHeader("Content-Type") : "", CONTENT_LENGTH: (req.data ? req.data.length : 0) });
-    let rsp = sendRequest(socket, requestId, params, req.data);
+    let rsp = sendRequest(socket, requestId, params, req.data, version);
     if (!rsp) {
         req.response.writeHead(500, "io_error");
         req.end();
