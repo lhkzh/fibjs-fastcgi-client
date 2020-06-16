@@ -285,32 +285,30 @@ function sendRequestByHttp(socket, requestId, req, cgiRoot, serverParamss = {}, 
     serverParamss.SERVER_SOFTWARE = serverParamss.SERVER_SOFTWARE || "fibjs";
     params = Object.assign(Object.assign(Object.assign({}, params), serverParamss), { GATEWAY_INTERFACE: "FastCGI/1.0", REQUEST_METHOD: req.method, DOCUMENT_ROOT: root, SCRIPT_FILENAME: cgi_file, SCRIPT_NAME: path, REQUEST_URI: path + query, QUERY_STRING: query, REMOTE_ADDR: req.socket["remoteAddress"], REMOTE_PORT: req.socket["remotePort"], SERVER_ADDR: req.socket["localAddress"], SERVER_PORT: req.socket["localPort"], SERVER_PROTOCOL: req.protocol, CONTENT_TYPE: req.hasHeader("Content-Type") ? req.firstHeader("Content-Type") : "", CONTENT_LENGTH: (req.data ? req.data.length : 0) });
     let rsp = sendRequest(socket, requestId, params, req.data, version);
+    let err_msg;
     if (!rsp) {
-        req.response.writeHead(500, "io_error");
-        req.end();
-        return 500;
+        err_msg = "io_error";
     }
-    if (rsp.protocolStatus == ProtocolStatus.CANT_MPX_CONN) {
-        req.response.writeHead(500, 'rejected:limit full.');
-        req.end();
-        return 500;
+    else if (rsp.protocolStatus == ProtocolStatus.CANT_MPX_CONN) {
+        err_msg = "rejected:limit full.";
     }
     else if (rsp.protocolStatus == ProtocolStatus.OVERLOADED) {
-        req.response.writeHead(500, 'rejected:not available.');
-        req.end();
-        return 500;
+        err_msg = "rejected:not available.";
     }
     else if (rsp.protocolStatus == ProtocolStatus.UNKNOWN_ROLE) {
-        req.response.writeHead(500, 'rejected:no role.');
-        req.end();
-        return 500;
+        err_msg = "rejected:no role.";
     }
-    for (var k in rsp.headers) {
-        req.response.headers[k] = rsp.headers[k];
+    if (err_msg) {
+        req.response.writeHead(500, err_msg);
     }
-    req.response.write(rsp.content);
+    else {
+        for (var k in rsp.headers) {
+            req.response.headers[k] = rsp.headers[k];
+        }
+        req.response.write(rsp.content);
+    }
     req.end();
-    return 0;
+    return err_msg ? 500 : 0;
 }
 exports.sendRequestByHttp = sendRequestByHttp;
 function sendGetCgiVal(socket, params, version = 1) {

@@ -6,3 +6,5 @@ const FcgiClient_1 = require("./FcgiClient");
 exports.FcgiClient = FcgiClient_1.FcgiClient;
 const FcgiClientPool_1 = require("./FcgiClientPool");
 exports.FcgiClientPool = FcgiClientPool_1.FcgiClientPool;
+const consts_1 = require("./consts");
+exports.ProtocolStatus = consts_1.ProtocolStatus;

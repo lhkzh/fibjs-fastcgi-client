@@ -1,10 +1,10 @@
-import {MsgType} from "./consts";
+import {MsgType, ProtocolStatus} from "./consts";
 
 export class FcgiResponse {
     public version:number;
     public requestId:number;
     public appStatus:number;
-    public protocolStatus:number;
+    public protocolStatus:ProtocolStatus;
     public out:Class_Buffer;
     public err:Class_Buffer;
 

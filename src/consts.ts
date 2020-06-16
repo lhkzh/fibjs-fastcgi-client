@@ -296,30 +296,26 @@ export function sendRequestByHttp(socket:Class_Socket,requestId:number, req:Clas
         CONTENT_LENGTH:(req.data?req.data.length:0)
     }
     let rsp = sendRequest(socket, requestId, params, req.data, version);
+    let err_msg:string;
     if(!rsp){
-        req.response.writeHead(500,"io_error");
-        req.end();
-        return 500;
-    }
-    if(rsp.protocolStatus==ProtocolStatus.CANT_MPX_CONN){
-        req.response.writeHead(500,'rejected:limit full.');
-        req.end();
-        return 500;
+        err_msg="io_error";
+    }else if(rsp.protocolStatus==ProtocolStatus.CANT_MPX_CONN){
+        err_msg="rejected:limit full.";
     }else if(rsp.protocolStatus==ProtocolStatus.OVERLOADED){
-        req.response.writeHead(500,'rejected:not available.');
-        req.end();
-        return 500;
+        err_msg="rejected:not available.";
     }else if(rsp.protocolStatus==ProtocolStatus.UNKNOWN_ROLE){
-        req.response.writeHead(500,'rejected:no role.');
-        req.end();
-        return 500;
+        err_msg="rejected:no role.";
     }
-    for(var k in rsp.headers){
-        req.response.headers[k]=rsp.headers[k];
+    if(err_msg){
+        req.response.writeHead(500, err_msg);
+    }else{
+        for(var k in rsp.headers){
+            req.response.headers[k]=rsp.headers[k];
+        }
+        req.response.write(rsp.content);
     }
-    req.response.write(rsp.content);
     req.end();
-    return 0;
+    return err_msg?500:0;
 }
 export function sendGetCgiVal(socket:Class_Socket, params:{[index:string]:any}, version:number=1) {
     let requestId=0;
