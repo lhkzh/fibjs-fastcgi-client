@@ -1,6 +1,6 @@
 /// <reference types="@fibjs/types" />
 
-import {FcgiClientPool, FcgiClient, FcgiResponse, ProtocolStatus} from "../src";
+import {FcgiClientPool, FcgiClient, FcgiResponse, ProtocolStatus, toQueryString} from "../src";
 
 export interface FcgiRequestOpts{
     path:string,query?:string,
@@ -39,5 +39,6 @@ export{
     FcgiResponse,
     FcgiClient,
     FcgiClientPool,
-    ProtocolStatus
+    ProtocolStatus,
+    toQueryString
 }

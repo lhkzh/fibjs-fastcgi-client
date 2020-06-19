@@ -8,3 +8,4 @@ const FcgiClientPool_1 = require("./FcgiClientPool");
 exports.FcgiClientPool = FcgiClientPool_1.FcgiClientPool;
 const consts_1 = require("./consts");
 exports.ProtocolStatus = consts_1.ProtocolStatus;
+exports.toQueryString = consts_1.toQueryString;

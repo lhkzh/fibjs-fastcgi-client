@@ -59,7 +59,7 @@ function encodeFormStr(D) {
 }
 //编码数据
 export function toQueryString(d) {
-    return d ? (typeof d=="string"?encodeFormStr(d):encodeFormObj(d)).join("&").replace("/%20/g", "+") : null;
+    return d ? (typeof d=="string"?encodeFormStr(d):encodeFormObj(d)).join("&").replace("/%20/g", "+") : "";
 }
 // export function toQueryString(kv:any) {
 //     var arr=[];
@@ -135,6 +135,10 @@ function parsePair(msgData, start){
         end: start + keyLen + valueLen
     };
 }
+function query_uri(path:string, queryStr:string){
+    if(!queryStr)return path;
+    return queryStr[0]!='?' ? `${path}?${queryStr}`:`${path}${queryStr}`;
+}
 export function parseCgiKv(msgData:Class_Buffer){
     var res = {};
     for(var pos = 0; pos < msgData.length;) {
@@ -165,7 +169,7 @@ export function newRequestParams(opts:FcgiRequestOpts, data?:Class_Buffer, serve
         DOCUMENT_ROOT:root,
         SCRIPT_FILENAME:cgi_file,
         SCRIPT_NAME:path,
-        REQUEST_URI:path+query,
+        REQUEST_URI:query_uri(path, query),
         QUERY_STRING:query,
         REMOTE_ADDR:opts.remoteAddress||"127.0.0.1",
         REMOTE_PORT:(opts.remotePort||90999)+"",
@@ -285,7 +289,7 @@ export function sendRequestByHttp(socket:Class_Socket,requestId:number, req:Clas
         DOCUMENT_ROOT:root,
         SCRIPT_FILENAME:cgi_file,
         SCRIPT_NAME:path,
-        REQUEST_URI:path+query,
+        REQUEST_URI:query_uri(path, query),
         QUERY_STRING:query,
         REMOTE_ADDR:req.socket["remoteAddress"],
         REMOTE_PORT:req.socket["remotePort"],
