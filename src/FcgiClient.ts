@@ -137,9 +137,8 @@ export class FcgiClient implements FcgiClientApi{
     /**
      * 获取cgi运行参数
      */
-    public requestCgiVars(params:{[index:string]:string}){
+    public requestCgiVars(params:{[index:string]:string}={FCGI_MAX_CONNS:'',FCGI_MAX_REQS:'',FCGI_MPXS_CONNS:''}){
         this.tryAutoConnect();
-        params = params?params:{FCGI_MAX_CONNS: '',FCGI_MAX_REQS: '',FCGI_MPXS_CONNS: '',};
         let rsp = sendGetCgiVal(this.sock, params);
         let kv = parseCgiKv(rsp.content);
         let ret:{[index:string]:number}={};
@@ -149,5 +148,17 @@ export class FcgiClient implements FcgiClientApi{
             }
         }
         return ret;
+    }
+
+    /**
+     * test-connection
+     */
+    public check(){
+        try{
+            this.requestCgiVars()
+            return true;
+        }catch (e) {
+            return false;
+        }
     }
 }

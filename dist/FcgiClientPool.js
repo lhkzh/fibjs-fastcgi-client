@@ -105,7 +105,7 @@ class FcgiClientPool {
     /**
      * 获取cgi运行参数
      */
-    requestCgiVars(params) {
+    requestCgiVars(params = { FCGI_MAX_CONNS: '', FCGI_MAX_REQS: '', FCGI_MPXS_CONNS: '' }) {
         var c = this.borrowClient();
         try {
             return c.requestCgiVars(params);
@@ -113,6 +113,10 @@ class FcgiClientPool {
         finally {
             this.returnClient(c);
         }
+    }
+    //检测所有存活的client-活性
+    check() {
+        this.clients.forEach(e => e.check());
     }
 }
 exports.FcgiClientPool = FcgiClientPool;

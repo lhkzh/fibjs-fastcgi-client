@@ -106,12 +106,16 @@ export class FcgiClientPool implements FcgiClientApi{
     /**
      * 获取cgi运行参数
      */
-    public requestCgiVars(params:{[index:string]:string}){
+    public requestCgiVars(params:{[index:string]:string}={FCGI_MAX_CONNS:'',FCGI_MAX_REQS:'',FCGI_MPXS_CONNS:''}){
         var c=this.borrowClient();
         try{
             return c.requestCgiVars(params);
         }finally {
             this.returnClient(c);
         }
+    }
+    //检测所有存活的client-活性
+    public check(){
+        this.clients.forEach(e=>e.check());
     }
 }

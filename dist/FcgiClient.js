@@ -121,9 +121,8 @@ class FcgiClient {
     /**
      * 获取cgi运行参数
      */
-    requestCgiVars(params) {
+    requestCgiVars(params = { FCGI_MAX_CONNS: '', FCGI_MAX_REQS: '', FCGI_MPXS_CONNS: '' }) {
         this.tryAutoConnect();
-        params = params ? params : { FCGI_MAX_CONNS: '', FCGI_MAX_REQS: '', FCGI_MPXS_CONNS: '', };
         let rsp = consts_1.sendGetCgiVal(this.sock, params);
         let kv = consts_1.parseCgiKv(rsp.content);
         let ret = {};
@@ -133,6 +132,18 @@ class FcgiClient {
             }
         }
         return ret;
+    }
+    /**
+     * test-connection
+     */
+    check() {
+        try {
+            this.requestCgiVars();
+            return true;
+        }
+        catch (e) {
+            return false;
+        }
     }
 }
 exports.FcgiClient = FcgiClient;
