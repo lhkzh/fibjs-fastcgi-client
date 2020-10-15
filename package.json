@@ -1,6 +1,6 @@
 {
   "name": "fibjs-fastcgi-client",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "",
   "main": "./dist/index.js",
   "types": "./@types/index.d.ts",
@@ -8,10 +8,9 @@
   "author": "",
   "homepage": "https://github.com/lhkzh/fibjs-fastcgi-client",
   "license": "ISC",
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
-        "@fibjs/types": "^0.29.0"
+    "@fibjs/types": "^0.31.0"
   },
   "peerDependencies": {},
   "files": [
