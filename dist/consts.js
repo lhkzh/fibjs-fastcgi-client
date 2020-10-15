@@ -17,7 +17,8 @@ var PADDING_BUFS = [
 exports.EMPTY_BUF = new Buffer(0);
 exports.FLAG_PROPERTY_CLOSED = "$@closed";
 const FLAG_PROPERTY_LOCK = "$@locked";
-let E = encodeURIComponent, S = Object.prototype.toString, F = function () { };
+let E = encodeURIComponent, S = Object.prototype.toString, F = function () {
+};
 //编码对象-节点
 function encodeFormObjChild(k, v, pName) {
     var r = [];

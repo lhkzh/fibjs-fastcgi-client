@@ -3,7 +3,7 @@ import {FcgiClient} from "./FcgiClient";
 import {FcgiClientPool} from "./FcgiClientPool";
 import {ProtocolStatus, toQueryString} from "./consts";
 
-export{
+export {
     FcgiResponse,
     FcgiClient,
     FcgiClientPool,

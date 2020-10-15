@@ -21,7 +21,6 @@
     "@types",
     "src",
     "dist",
-    "php",
-    "test.js"
+    "php"
   ]
 }

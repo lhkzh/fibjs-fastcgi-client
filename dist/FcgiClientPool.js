@@ -18,13 +18,10 @@ class FcgiClientPool {
         this.cfg = opts;
         this.clients = [];
         this.num = 0;
-        this.notify = new coroutine.Event();
+        this.semaphore = new coroutine.Semaphore(opts.max);
     }
     borrowClient() {
-        while (this.num >= this.cfg.max) {
-            this.notify.clear();
-            this.notify.wait();
-        }
+        this.semaphore.acquire();
         if (this.clients.length > 0) {
             return this.clients.shift();
         }
@@ -39,11 +36,11 @@ class FcgiClientPool {
     }
     returnClient(c) {
         this.clients.push(c);
-        if (this.clients.length > this.cfg.min) {
+        if (this.clients.length > this.cfg.min || this._closed) {
             this.num--;
             this.clients.shift().close();
         }
-        this.notify.set();
+        this.semaphore.release();
     }
     close() {
         this._closed = true;
@@ -51,8 +48,8 @@ class FcgiClientPool {
         while (this.clients.length > 0) {
             this.num--;
             this.clients.shift().close();
+            this.semaphore.release();
         }
-        this.notify.set();
     }
     isClosed() {
         return this._closed;
@@ -105,7 +102,11 @@ class FcgiClientPool {
     /**
      * 获取cgi运行参数
      */
-    requestCgiVars(params = { FCGI_MAX_CONNS: '', FCGI_MAX_REQS: '', FCGI_MPXS_CONNS: '' }) {
+    requestCgiVars(params = {
+        FCGI_MAX_CONNS: '',
+        FCGI_MAX_REQS: '',
+        FCGI_MPXS_CONNS: ''
+    }) {
         var c = this.borrowClient();
         try {
             return c.requestCgiVars(params);

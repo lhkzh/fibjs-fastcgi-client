@@ -10,7 +10,12 @@ let coroutine = require("coroutine");
  */
 class FcgiClient {
     constructor(opts = {}) {
-        this.opts = { host: opts.host || "127.0.0.1", port: opts.port || 9000, autoReconnect: opts.autoReconnect, serverParams: opts.serverParams || {} };
+        this.opts = {
+            host: opts.host || "127.0.0.1",
+            port: opts.port || 9000,
+            autoReconnect: opts.autoReconnect,
+            serverParams: opts.serverParams || {}
+        };
         this.root = opts.root || path.fullpath(process.cwd() + '/php');
         this.wait_connect = new coroutine.Event(false);
         this.autoConnect();
@@ -121,7 +126,11 @@ class FcgiClient {
     /**
      * 获取cgi运行参数
      */
-    requestCgiVars(params = { FCGI_MAX_CONNS: '', FCGI_MAX_REQS: '', FCGI_MPXS_CONNS: '' }) {
+    requestCgiVars(params = {
+        FCGI_MAX_CONNS: '',
+        FCGI_MAX_REQS: '',
+        FCGI_MPXS_CONNS: ''
+    }) {
         this.tryAutoConnect();
         let rsp = consts_1.sendGetCgiVal(this.sock, params);
         let kv = consts_1.parseCgiKv(rsp.content);
