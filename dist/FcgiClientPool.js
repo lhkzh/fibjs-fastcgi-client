@@ -31,14 +31,21 @@ class FcgiClientPool {
         }
         catch (e) {
             this.num--;
+            this.semaphore.release();
             throw e;
         }
     }
-    returnClient(c) {
-        this.clients.push(c);
-        if (this.clients.length > this.cfg.min || this._closed) {
+    returnClient(c, fail) {
+        if (fail) {
             this.num--;
-            this.clients.shift().close();
+            c.close();
+        }
+        else {
+            this.clients.push(c);
+            if (this.clients.length > this.cfg.min || this._closed) {
+                this.num--;
+                this.clients.shift().close();
+            }
         }
         this.semaphore.release();
     }
@@ -60,12 +67,15 @@ class FcgiClientPool {
      * @returns number 状态码0=成功
      */
     requestByHttp(req) {
-        var c = this.borrowClient();
+        var c = this.borrowClient(), fail;
         try {
             return c.requestByHttp(req);
         }
+        catch (e) {
+            fail = true;
+        }
         finally {
-            this.returnClient(c);
+            this.returnClient(c, fail);
         }
     }
     /**
@@ -77,12 +87,15 @@ class FcgiClientPool {
      * @param addressInfo 客户端网络信息
      */
     requestByParams(path, query, post, headers, addressInfo) {
-        var c = this.borrowClient();
+        var c = this.borrowClient(), fail;
         try {
             return c.requestByParams(path, query, post, headers, addressInfo);
         }
+        catch (e) {
+            fail = true;
+        }
         finally {
-            this.returnClient(c);
+            this.returnClient(c, fail);
         }
     }
     /**
@@ -91,12 +104,15 @@ class FcgiClientPool {
      * @param body post数据
      */
     requestByCgiParams(cgiParams, body) {
-        var c = this.borrowClient();
+        var c = this.borrowClient(), fail;
         try {
             return c.requestByCgiParams(cgiParams, body);
         }
+        catch (e) {
+            fail = true;
+        }
         finally {
-            this.returnClient(c);
+            this.returnClient(c, fail);
         }
     }
     /**
@@ -107,17 +123,23 @@ class FcgiClientPool {
         FCGI_MAX_REQS: '',
         FCGI_MPXS_CONNS: ''
     }) {
-        var c = this.borrowClient();
+        var c = this.borrowClient(), fail;
         try {
             return c.requestCgiVars(params);
         }
+        catch (e) {
+            fail = true;
+        }
         finally {
-            this.returnClient(c);
+            this.returnClient(c, fail);
         }
     }
     //检测所有存活的client-活性
     check() {
         this.clients.forEach(e => e.check());
+    }
+    stat() {
+        return { num: this.num, idel: this.clients.length };
     }
 }
 exports.FcgiClientPool = FcgiClientPool;

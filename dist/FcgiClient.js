@@ -17,7 +17,7 @@ class FcgiClient {
             serverParams: opts.serverParams || {}
         };
         this.root = opts.root || path.fullpath(process.cwd() + '/php');
-        this.wait_connect = new coroutine.Event(false);
+        this.wait_connect = new coroutine.Semaphore(1);
         this.autoConnect();
     }
     connect() {
@@ -28,33 +28,39 @@ class FcgiClient {
         }
         this.recv = consts_1.recvMsgByFiber(sock);
         this.sock = sock;
-        this.wait_connect.set();
         return sock;
     }
     autoConnect() {
-        if (this.is_reConnectIng) {
-            this.wait_connect.wait(); //等待重连
+        if (this.wait_connect.acquire(false) == false) {
+            this.wait_connect.acquire();
             if (this.isClosed()) {
+                this.wait_connect.release();
                 throw new Error("io_error:connect fcgi fail");
             }
         }
-        this.wait_connect.clear();
-        this.is_reConnectIng = true;
-        var i = 999;
+        let i = this.wait_connect["_i_"] = 60;
         while (i > 0) {
             i--;
             try {
                 this.connect();
-                this.is_reConnectIng = false;
+                this.wait_connect.release();
                 return true;
             }
             catch (e) {
-                coroutine.sleep(Math.ceil(Math.random() * 100));
+                coroutine.sleep(Math.ceil(Math.random() * 10));
+                console.error(i + "-" + e.message);
             }
         }
-        this.wait_connect.set();
-        this.is_reConnectIng = false;
+        this.wait_connect.release();
         throw new Error("io_error:connect fcgi fail");
+    }
+    //如果在重连，等待其完成
+    waitReconn() {
+        if (this.wait_connect.acquire(false) == false) {
+            this.wait_connect["_i_"] = 0;
+            this.wait_connect.acquire();
+        }
+        this.wait_connect.release();
     }
     tryAutoConnect() {
         if (this.isClosed() && this.opts.autoReconnect) {
@@ -66,13 +72,7 @@ class FcgiClient {
      */
     close() {
         this.opts.autoReconnect = false;
-        try {
-            if (this.is_reConnectIng) {
-                this.wait_connect.wait(); //等待重连
-            }
-        }
-        catch (e) {
-        }
+        this.waitReconn(); //等待重连任务完成
         if (this.sock) {
             consts_1.try_sock_close(this.sock);
         }

@@ -265,6 +265,7 @@ function sendRequest(socket, requestId, params, body, version = 1) {
         else {
             socket.write(packPart(MsgType.STDIN, requestId, null, version));
         }
+        wrap.evt.wait();
     }
     catch (e) {
         try_sock_close(socket);
@@ -272,7 +273,9 @@ function sendRequest(socket, requestId, params, body, version = 1) {
     }
     finally {
         socket[FLAG_PROPERTY_LOCK].release(); //写数据包时锁定一下
-        wrap.evt.wait();
+    }
+    if (wrap.err) {
+        throw new Error(wrap.err);
     }
     return wrap.rsp;
 }
@@ -324,6 +327,7 @@ function sendGetCgiVal(socket, params, version = 1) {
         let kv_body = stringifyKv(params);
         socket.write(packPart(MsgType.GET_VALUES, requestId, kv_body, version));
         socket.write(kv_body);
+        wrap.evt.wait();
     }
     catch (e) {
         try_sock_close(socket);
@@ -331,18 +335,11 @@ function sendGetCgiVal(socket, params, version = 1) {
     }
     finally {
         socket[FLAG_PROPERTY_LOCK].release(); //写数据包时锁定一下
-        wrap.evt.wait();
     }
     return wrap.rsp;
 }
 exports.sendGetCgiVal = sendGetCgiVal;
-function check_sock_recv(socket, readData) {
-    if (readData == null) {
-        try_sock_close(socket);
-        throw new Error('io-error');
-    }
-}
-function try_sock_close(socket) {
+function try_sock_close(socket, err) {
     socket[exports.FLAG_PROPERTY_CLOSED] = true;
     try {
         socket.close();
@@ -351,20 +348,34 @@ function try_sock_close(socket) {
     }
     for (var k in socket) {
         if (k.charAt(0) == '@') {
-            var wrap = socket[k];
+            let wrap = socket[k];
             delete socket[k];
+            wrap.err = err;
             wrap.evt.set();
         }
     }
 }
 exports.try_sock_close = try_sock_close;
+function recv_len(sock, len) {
+    let readData;
+    try {
+        readData = sock.read(len);
+    }
+    catch (e) {
+        throw e;
+    }
+    if (readData == null) {
+        throw new Error('io-error');
+    }
+    return readData;
+}
 function recvMsgPart(socket) {
     let expectLen = 8;
-    let headData = socket.read(expectLen);
-    check_sock_recv(socket, headData);
+    let headData = recv_len(socket, expectLen);
     if (headData.readUInt8(0, true) !== 1) {
-        try_sock_close(socket);
-        throw new Error('The server does not speak a compatible FastCGI protocol.');
+        let err = 'The server does not speak a compatible FastCGI protocol.';
+        try_sock_close(socket, err);
+        throw new Error(err);
     }
     let version = headData.readUInt8(0, true);
     let msgType = headData.readUInt8(1, true);
@@ -372,10 +383,9 @@ function recvMsgPart(socket) {
     let restBodyLen = headData.readUInt16BE(4, true);
     let restPaddingLen = headData.readUInt8(6, true);
     let reserved = headData.readUInt8(7, true) != 0;
-    let content = restBodyLen > 0 ? socket.read(restBodyLen) : exports.EMPTY_BUF;
-    check_sock_recv(socket, content);
+    let content = restBodyLen > 0 ? recv_len(socket, restBodyLen) : exports.EMPTY_BUF;
     if (restPaddingLen > 0) {
-        socket.read(restPaddingLen);
+        recv_len(socket, restPaddingLen);
     }
     return { id: reqId, type: msgType, body: content, version: version, reserved: reserved };
 }
@@ -383,7 +393,7 @@ exports.recvMsgPart = recvMsgPart;
 function recvMsgByBlock(sock) {
     try {
         while (!sock[exports.FLAG_PROPERTY_CLOSED]) {
-            var part = recvMsgPart(sock);
+            let part = recvMsgPart(sock);
             let wait = sock["@" + part.id];
             // console.log("while",wait,part,part.body.toString())
             if (wait.rsp == null) {
@@ -398,10 +408,7 @@ function recvMsgByBlock(sock) {
     catch (e) {
         if (!sock[exports.FLAG_PROPERTY_CLOSED]) {
             console.error("fcgi_recv_err", e);
-        }
-        else {
-            try_sock_close(sock);
-            // throw e;
+            try_sock_close(sock, e.message);
         }
     }
 }
@@ -413,7 +420,7 @@ if (!global.hasOwnProperty("fibfcgi_request_id")) {
     global["fibfcgi_request_id"] = 0;
 }
 function nextRequestId() {
-    var r = global["fibfcgi_request_id"] + 1;
+    let r = global["fibfcgi_request_id"] + 1;
     if (r >= 0xFFFF) {
         r = 1;
     }

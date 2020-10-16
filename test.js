@@ -28,12 +28,22 @@ var coroutine=require("coroutine");
 
 // var client = new fcgi.FcgiClientPool({host:"127.0.0.1",port:9000,root:"/mnt/e/workplace/fib_fcgi/php"});
 var client = new fcgi.FcgiClientPool({host:"127.0.0.1",port:9123,root:__dirname+"/php/"});
-
-for(var i=0;i<100;i++){
+var total = 100;
+for(var i=0;i<total;i++){
     coroutine.start(function () {
         // root:"/mnt/e/workplace/fib_fcgi/php"
-        var rsp=client.requestByParams("/hi.php","a=abc&i="+(idx++));
-        console.log(Date.now(),rsp.requestId,rsp.protocolStatus,rsp.appStatus,rsp.content.toString());
-        // console.log(client.requestByParams("/hi.php","a=abc&i="+(idx++)).requestId);
-    })
+        try{
+            var rsp=client.requestByParams("/hi.php","a=abc&i="+(idx++));
+            console.log(Date.now(),rsp.requestId,rsp.protocolStatus,rsp.appStatus,rsp.content.toString());
+            // console.log(client.requestByParams("/hi.php","a=abc&i="+(idx++)).requestId);
+        }catch (e) {
+            console.error(e)
+        }
+        total--;
+    });
 }
+while(total>0){
+    coroutine.sleep();
+}
+console.log("client.stat",client.stat?client.stat():null)
+process.exit();
