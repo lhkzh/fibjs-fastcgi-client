@@ -1,6 +1,6 @@
 "use strict";
-/// <reference types="@fibjs/types" />
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.MsgType = exports.ProtocolStatus = exports.nextRequestId = exports.recvMsgByFiber = exports.recvMsgPart = exports.try_sock_close = exports.sendGetCgiVal = exports.sendRequestByHttp = exports.sendRequest = exports.newRequestParams = exports.parseCgiKv = exports.toQueryString = exports.FLAG_PROPERTY_CLOSED = exports.EMPTY_BUF = void 0;
 const FcgiResponse_1 = require("./FcgiResponse");
 let coroutine = require("coroutine");
 let util = require("util");
@@ -176,7 +176,24 @@ function newRequestParams(opts, data, serverParamss = {}) {
     }
     serverParamss.SERVER_NAME = serverParamss.SERVER_NAME || "localhost";
     serverParamss.SERVER_SOFTWARE = serverParamss.SERVER_SOFTWARE || "fibjs";
-    params = Object.assign(Object.assign(Object.assign({}, params), serverParamss), { GATEWAY_INTERFACE: "FastCGI/1.0", REQUEST_METHOD: opts.method || (data && data.length > 0 ? "POST" : "GET"), DOCUMENT_ROOT: root, SCRIPT_FILENAME: cgi_file, SCRIPT_NAME: path, REQUEST_URI: query_uri(path, query), QUERY_STRING: query, REMOTE_ADDR: opts.remoteAddress || "127.0.0.1", REMOTE_PORT: (opts.remotePort || 90999) + "", SERVER_ADDR: opts.localAddress || "127.0.0.1", SERVER_PORT: (opts.localPort || 80) + "", SERVER_PROTOCOL: "HTTP/1.1", CONTENT_TYPE: opts.headers && opts.headers["Content-Type"] ? opts.headers["Content-Type"] : "", CONTENT_LENGTH: (data ? data.length : 0) + "" });
+    params = {
+        ...params,
+        ...serverParamss,
+        GATEWAY_INTERFACE: "FastCGI/1.0",
+        REQUEST_METHOD: opts.method || (data && data.length > 0 ? "POST" : "GET"),
+        DOCUMENT_ROOT: root,
+        SCRIPT_FILENAME: cgi_file,
+        SCRIPT_NAME: path,
+        REQUEST_URI: query_uri(path, query),
+        QUERY_STRING: query,
+        REMOTE_ADDR: opts.remoteAddress || "127.0.0.1",
+        REMOTE_PORT: (opts.remotePort || 90999) + "",
+        SERVER_ADDR: opts.localAddress || "127.0.0.1",
+        SERVER_PORT: (opts.localPort || 80) + "",
+        SERVER_PROTOCOL: "HTTP/1.1",
+        CONTENT_TYPE: opts.headers && opts.headers["Content-Type"] ? opts.headers["Content-Type"] : "",
+        CONTENT_LENGTH: (data ? data.length : 0) + ""
+    };
     return params;
 }
 exports.newRequestParams = newRequestParams;
@@ -292,7 +309,24 @@ function sendRequestByHttp(socket, requestId, req, cgiRoot, serverParamss = {}, 
     }
     serverParamss.SERVER_NAME = serverParamss.SERVER_NAME || "localhost";
     serverParamss.SERVER_SOFTWARE = serverParamss.SERVER_SOFTWARE || "fibjs";
-    params = Object.assign(Object.assign(Object.assign({}, params), serverParamss), { GATEWAY_INTERFACE: "FastCGI/1.0", REQUEST_METHOD: req.method, DOCUMENT_ROOT: root, SCRIPT_FILENAME: cgi_file, SCRIPT_NAME: path, REQUEST_URI: query_uri(path, query), QUERY_STRING: query, REMOTE_ADDR: req.socket["remoteAddress"], REMOTE_PORT: req.socket["remotePort"], SERVER_ADDR: req.socket["localAddress"], SERVER_PORT: req.socket["localPort"], SERVER_PROTOCOL: req.protocol, CONTENT_TYPE: req.hasHeader("Content-Type") ? req.firstHeader("Content-Type") : "", CONTENT_LENGTH: (req.data ? req.data.length : 0) });
+    params = {
+        ...params,
+        ...serverParamss,
+        GATEWAY_INTERFACE: "FastCGI/1.0",
+        REQUEST_METHOD: req.method,
+        DOCUMENT_ROOT: root,
+        SCRIPT_FILENAME: cgi_file,
+        SCRIPT_NAME: path,
+        REQUEST_URI: query_uri(path, query),
+        QUERY_STRING: query,
+        REMOTE_ADDR: req.socket["remoteAddress"],
+        REMOTE_PORT: req.socket["remotePort"],
+        SERVER_ADDR: req.socket["localAddress"],
+        SERVER_PORT: req.socket["localPort"],
+        SERVER_PROTOCOL: req.protocol,
+        CONTENT_TYPE: req.hasHeader("Content-Type") ? req.firstHeader("Content-Type") : "",
+        CONTENT_LENGTH: (req.data ? req.data.length : 0)
+    };
     let rsp = sendRequest(socket, requestId, params, req.data, version);
     let err_msg;
     if (!rsp) {

@@ -8,17 +8,14 @@
   "author": "",
   "homepage": "https://github.com/lhkzh/fibjs-fastcgi-client",
   "license": "ISC",
-  "dependencies": {},
   "devDependencies": {
-    "@fibjs/types": "^0.31.0"
+    "@fibjs/types": "^0.32.10"
   },
-  "peerDependencies": {},
   "files": [
     "package.json",
     "README.md",
     "tsconfig.json",
     "@types",
-    "src",
     "dist",
     "php"
   ]

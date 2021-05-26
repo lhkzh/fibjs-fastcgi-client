@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.FcgiClient = void 0;
 const consts_1 = require("./consts");
-let net = require("net");
-let path = require("path");
-let util = require("util");
-let coroutine = require("coroutine");
+const path = require("path");
+const coroutine = require("coroutine");
+const net = require("net");
+const util = require("util");
 /**
  * fastcgi-request
  */
@@ -13,6 +14,7 @@ class FcgiClient {
         this.opts = {
             host: opts.host || "127.0.0.1",
             port: opts.port || 9000,
+            url: opts.url,
             autoReconnect: opts.autoReconnect,
             serverParams: opts.serverParams || {}
         };
@@ -20,9 +22,16 @@ class FcgiClient {
         this.wait_connect = new coroutine.Semaphore(1);
         this.autoConnect();
     }
-    connect() {
-        let sock = new net.Socket();
+    newSock() {
+        if (this.opts.url && this.opts.url.length > 0) {
+            return net.connect(this.opts.url);
+        }
+        let sock = new net.Socket(net.AF_INET, net.SOCK_STREAM);
         sock.connect(this.opts.host, this.opts.port);
+        return sock;
+    }
+    connect() {
+        let sock = this.newSock();
         if (this.sock) {
             consts_1.try_sock_close(this.sock);
         }

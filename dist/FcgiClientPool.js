@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.FcgiClientPool = void 0;
 const FcgiClient_1 = require("./FcgiClient");
 let coroutine = require("coroutine");
 const default_opts = { min: 1, max: 4, autoReconnect: true, host: "127.0.0.1", port: 9000 };

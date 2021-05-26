@@ -1,11 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.toQueryString = exports.ProtocolStatus = exports.FcgiClientPool = exports.FcgiClient = exports.FcgiResponse = void 0;
+/// <reference types="@fibjs/types" />
 const FcgiResponse_1 = require("./FcgiResponse");
-exports.FcgiResponse = FcgiResponse_1.FcgiResponse;
+Object.defineProperty(exports, "FcgiResponse", { enumerable: true, get: function () { return FcgiResponse_1.FcgiResponse; } });
 const FcgiClient_1 = require("./FcgiClient");
-exports.FcgiClient = FcgiClient_1.FcgiClient;
+Object.defineProperty(exports, "FcgiClient", { enumerable: true, get: function () { return FcgiClient_1.FcgiClient; } });
 const FcgiClientPool_1 = require("./FcgiClientPool");
-exports.FcgiClientPool = FcgiClientPool_1.FcgiClientPool;
+Object.defineProperty(exports, "FcgiClientPool", { enumerable: true, get: function () { return FcgiClientPool_1.FcgiClientPool; } });
 const consts_1 = require("./consts");
-exports.ProtocolStatus = consts_1.ProtocolStatus;
-exports.toQueryString = consts_1.toQueryString;
+Object.defineProperty(exports, "ProtocolStatus", { enumerable: true, get: function () { return consts_1.ProtocolStatus; } });
+Object.defineProperty(exports, "toQueryString", { enumerable: true, get: function () { return consts_1.toQueryString; } });

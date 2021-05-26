@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.FcgiResponse = void 0;
 const consts_1 = require("./consts");
 class FcgiResponse {
     constructor(data) {

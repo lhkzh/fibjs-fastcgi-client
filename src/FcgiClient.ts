@@ -8,12 +8,11 @@ import {
     toQueryString, try_sock_close
 } from "./consts";
 import {FcgiResponse} from "./FcgiResponse";
-import {FcgiClientApi, FcgiRequestOpts} from "../@types";
-
-let net = require("net");
-let path = require("path");
-let util = require("util");
-let coroutine = require("coroutine");
+import {FcgiClientApi, FcgiRequestOpts} from "./consts";
+import * as path from "path";
+import * as coroutine from "coroutine";
+import * as net from "net";
+import * as util from "util";
 
 /**
  * fastcgi-request
@@ -22,13 +21,14 @@ export class FcgiClient implements FcgiClientApi {
     private sock: Class_Socket;
     private root: string;
     private recv: Class_Fiber;
-    private opts: { host: string, port: number, autoReconnect: boolean, serverParams?: any };
+    private opts: { url?: string, host?: string, port?: number, autoReconnect: boolean, serverParams?: any };
     private wait_connect: Class_Semaphore;
 
-    constructor(opts: { host?: string, port?: number, root?: string, autoReconnect?: boolean, serverParams?: any } = {}) {
+    constructor(opts: { url?: string, host?: string, port?: number, root?: string, autoReconnect?: boolean, serverParams?: any } = {}) {
         this.opts = {
             host: opts.host || "127.0.0.1",
             port: opts.port || 9000,
+            url: opts.url,
             autoReconnect: opts.autoReconnect,
             serverParams: opts.serverParams || {}
         };
@@ -37,9 +37,17 @@ export class FcgiClient implements FcgiClientApi {
         this.autoConnect()
     }
 
-    private connect() {
-        let sock = new net.Socket();
+    private newSock(): Class_Socket {
+        if (this.opts.url && this.opts.url.length > 0) {
+            return <any>net.connect(this.opts.url);
+        }
+        let sock = new net.Socket(net.AF_INET, net.SOCK_STREAM);
         sock.connect(this.opts.host, this.opts.port);
+        return sock;
+    }
+
+    private connect() {
+        let sock = this.newSock();
         if (this.sock) {
             try_sock_close(this.sock);
         }
@@ -49,7 +57,7 @@ export class FcgiClient implements FcgiClientApi {
     }
 
     private autoConnect() {
-        if(this.wait_connect.acquire(false)==false){
+        if (this.wait_connect.acquire(false) == false) {
             this.wait_connect.acquire();
             if (this.isClosed()) {
                 this.wait_connect.release();
@@ -65,20 +73,22 @@ export class FcgiClient implements FcgiClientApi {
                 return true;
             } catch (e) {
                 coroutine.sleep(Math.ceil(Math.random() * 10));
-                console.error(i+"-"+e.message)
+                console.error(i + "-" + e.message)
             }
         }
         this.wait_connect.release();
         throw new Error("io_error:connect fcgi fail");
     }
+
     //如果在重连，等待其完成
-    private waitReconn(){
-        if(this.wait_connect.acquire(false)==false){
+    private waitReconn() {
+        if (this.wait_connect.acquire(false) == false) {
             this.wait_connect["_i_"] = 0;
             this.wait_connect.acquire();
         }
         this.wait_connect.release();
     }
+
     private tryAutoConnect() {
         if (this.isClosed() && this.opts.autoReconnect) {
             this.autoConnect();
