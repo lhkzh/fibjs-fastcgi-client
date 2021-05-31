@@ -12,6 +12,23 @@
 /// <reference path="./dts/_import/bridge.d.ts" />
 
 import _Global = require('global');
+
+declare module 'process' {
+    const on: Class_EventEmitter['on']
+    const addListener: Class_EventEmitter['addListener']
+    const prependListener: Class_EventEmitter['prependListener']
+    const once: Class_EventEmitter['once']
+    const prependOnceListener: Class_EventEmitter['prependOnceListener']
+    const off: Class_EventEmitter['off']
+    const removeListener: Class_EventEmitter['removeListener']
+    const setMaxListeners: Class_EventEmitter['setMaxListeners']
+    const getMaxListeners: Class_EventEmitter['getMaxListeners']
+    const listeners: Class_EventEmitter['listeners']
+    const listenerCount: Class_EventEmitter['listenerCount']
+    const eventNames: Class_EventEmitter['eventNames']
+    const emit: Class_EventEmitter['emit']
+}
+
 declare global {
     var exports: {
         [k: string]: any

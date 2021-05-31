@@ -9,7 +9,7 @@
   "homepage": "https://github.com/lhkzh/fibjs-fastcgi-client",
   "license": "ISC",
   "devDependencies": {
-    "@fibjs/types": "^0.32.10"
+    "@fibjs/types": "^0.33.0"
   },
   "files": [
     "package.json",
