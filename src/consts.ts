@@ -220,13 +220,13 @@ function writeMsgPartSlice(socket: Class_Socket, msgType: number, requestId: num
     var contentLen = end - start;
     var paddingLen = (8 - (contentLen % 8)) % 8;
     if (start || end !== len) data = data.slice(start, end);
-    var buf = new Buffer(8);
-    buf.writeUInt8(version, 0, true);
-    buf.writeUInt8(msgType, 1, true);
-    buf.writeUInt16BE(requestId, 2, true);
-    buf.writeUInt16BE(contentLen, 4, true);
-    buf.writeUInt8(0, 6, true);
-    buf.writeUInt8(0, 7, true);
+    var buf = Buffer.alloc(8);
+    buf.writeUInt8(version, 0);
+    buf.writeUInt8(msgType, 1);
+    buf.writeUInt16BE(requestId, 2);
+    buf.writeUInt16BE(contentLen, 4);
+    buf.writeUInt8(0, 6);
+    buf.writeUInt8(0, 7);
     socket.write(buf);
     if (paddingLen) {
         socket.write(data);
@@ -387,17 +387,17 @@ function recv_len(sock: Class_Socket, len: number) {
 export function recvMsgPart(socket: Class_Socket) {
     let expectLen = 8;
     let headData = recv_len(socket, expectLen);
-    if (headData.readUInt8(0, true) !== 1) {
+    if (headData.readUInt8(0) !== 1) {
         let err = 'The server does not speak a compatible FastCGI protocol.';
         try_sock_close(socket, err);
         throw new Error(err);
     }
-    let version = headData.readUInt8(0, true);
-    let msgType = headData.readUInt8(1, true);
-    let reqId = headData.readUInt16BE(2, true);
-    let restBodyLen = headData.readUInt16BE(4, true);
-    let restPaddingLen = headData.readUInt8(6, true);
-    let reserved = headData.readUInt8(7, true) != 0;
+    let version = headData.readUInt8(0);
+    let msgType = headData.readUInt8(1);
+    let reqId = headData.readUInt16BE(2);
+    let restBodyLen = headData.readUInt16BE(4);
+    let restPaddingLen = headData.readUInt8(6);
+    let reserved = headData.readUInt8(7) != 0;
     let content = restBodyLen > 0 ? recv_len(socket, restBodyLen) : EMPTY_BUF;
     if (restPaddingLen > 0) {
         recv_len(socket, restPaddingLen);

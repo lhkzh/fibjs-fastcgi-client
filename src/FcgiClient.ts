@@ -41,7 +41,7 @@ export class FcgiClient implements FcgiClientApi {
         if (this.opts.url && this.opts.url.length > 0) {
             return <any>net.connect(this.opts.url);
         }
-        let sock = new net.Socket(net.AF_INET, net.SOCK_STREAM);
+        let sock = new net.Socket(net.AF_INET);
         sock.connect(this.opts.host, this.opts.port);
         return sock;
     }

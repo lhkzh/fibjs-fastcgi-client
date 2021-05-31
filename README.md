@@ -19,3 +19,8 @@ for(var i=0;i<100;i++){
       console.log(rsp);
     });  
 }  
+
+#use unixSocket
+var client = new fcgi.FcgiClient({url:"unix:/var/php.socket",root:www_root});    
+var client = new fcgi.FcgiClient({url:"pipe://./pipe/php.socket",root:www_root});    
+var client = new fcgi.FcgiClient({url:"tcp://./pipe/php.socket",root:www_root});
